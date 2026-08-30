@@ -1,4 +1,9 @@
-import { pipeline, type FeatureExtractionPipeline } from '@huggingface/transformers';
+import { env, pipeline, type FeatureExtractionPipeline } from '@huggingface/transformers';
+
+const configuredCacheDir = process.env.TRANSFORMERS_CACHE || process.env.HF_HOME;
+if (configuredCacheDir) {
+  env.cacheDir = configuredCacheDir;
+}
 
 let extractor: FeatureExtractionPipeline | null = null;
 

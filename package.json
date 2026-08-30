@@ -24,7 +24,13 @@
     "sla:probe": "tsx src/trust/sla-prober.ts",
     "verify": "tsx src/trust/verifier.ts",
     "copilot:auth": "tsx src/llm/copilot-auth.ts",
-    "test": "vitest"
+    "demo": "sh demo.sh",
+    "demo:seed": "tsx src/demo/seed.ts",
+    "demo:run": "tsx src/demo/run.ts",
+    "benchmark": "tsx src/demo/benchmark.ts",
+    "test": "vitest run --exclude tests/api.integration.test.ts",
+    "test:integration": "vitest run tests/api.integration.test.ts",
+    "test:all": "npm test && npm run test:integration"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.17",

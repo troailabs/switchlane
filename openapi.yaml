@@ -264,6 +264,12 @@ components:
               type: number
               minimum: 0
               maximum: 1
+            min_routing_confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+              default: 0.35
+              description: Abstain when the top candidate's quality confidence is below this value.
             quality_weight:
               type: number
               minimum: 0
@@ -288,6 +294,7 @@ components:
 
     RouteResponse:
       type: object
+      required: [recommendations, task_profile, meta]
       properties:
         recommendations:
           type: array
@@ -302,11 +309,23 @@ components:
           properties:
             match_path:
               type: string
-              enum: [schema_match, llm_intent, hybrid]
+              examples: [schema_match, llm_intent+rerank, hybrid+rerank]
             candidates_evaluated:
               type: integer
             elapsed_ms:
               type: integer
+            abstained:
+              type: boolean
+              description: True when Switchlane declines to route rather than return a weak match.
+            abstention_reason:
+              type: string
+              nullable: true
+              enum: [no_candidates, constraints_filtered_all_candidates, top_candidate_below_confidence_threshold]
+            confidence:
+              type: number
+              nullable: true
+              minimum: 0
+              maximum: 1
 
     Recommendation:
       type: object
@@ -358,9 +377,19 @@ components:
         language:
           type: string
           nullable: true
+        input_type:
+          type: string
+          nullable: true
+        output_type:
+          type: string
+          nullable: true
         complexity:
           type: string
           enum: [simple, medium, complex]
+        keywords:
+          type: array
+          items:
+            type: string
 
     AgentListResponse:
       type: object

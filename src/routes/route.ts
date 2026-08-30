@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { schemaMatch, dedupeByAgent } from '../mapper/schema-match.js';
 import { extractTaskProfile, matchByProfile, rerankAgents, type RerankResult } from '../mapper/llm-intent.js';
-import { rankAgents, type Constraints } from '../scorer/ranker.js';
+import { evaluateAbstention, rankAgents, type Constraints } from '../scorer/ranker.js';
 import { executeViaAgent } from '../proxy/executor.js';
 import { incrementUsage, type ApiKeyInfo } from '../auth.js';
 import { reportStripeUsage } from '../billing/stripe.js';
@@ -25,6 +25,7 @@ const routeRequestSchema = z.object({
     quality_weight: z.number().min(0).max(1).optional(),
     cost_weight: z.number().min(0).max(1).optional(),
     latency_weight: z.number().min(0).max(1).optional(),
+    min_routing_confidence: z.number().min(0).max(1).optional(),
   }).optional(),
   execute: z.boolean().default(false),
   limit: z.number().min(1).max(20).default(5),
@@ -170,7 +171,13 @@ routeRouter.post('/', async (c) => {
   // === Stage 5: Final ranking ===
   const constraints: Constraints = req.constraints || {};
   const ranked = await rankAgents(allAgentIds, matchReasons, matchSimilarities, constraints, rerankScores);
-  const recommendations = ranked.slice(0, req.limit);
+  const rankedRecommendations = ranked.slice(0, req.limit);
+  const abstention = evaluateAbstention(
+    rankedRecommendations,
+    allAgentIds.length,
+    constraints.min_routing_confidence
+  );
+  const recommendations = abstention.abstained ? [] : rankedRecommendations;
 
   const elapsed = Date.now() - startTime;
 
@@ -193,7 +200,7 @@ routeRouter.post('/', async (c) => {
         req.task,
         JSON.stringify(taskProfile),
         recommendations.map((r) => r.agent_id),
-        req.execute,
+        req.execute && !abstention.abstained,
       ]
     );
   } catch {}
@@ -227,6 +234,9 @@ routeRouter.post('/', async (c) => {
         match_path: matchPath,
         candidates_evaluated: allAgentIds.length,
         elapsed_ms: Date.now() - startTime,
+        abstained: false,
+        abstention_reason: null,
+        confidence: abstention.confidence,
       },
     });
   }
@@ -246,6 +256,9 @@ routeRouter.post('/', async (c) => {
       match_path: matchPath,
       candidates_evaluated: allAgentIds.length,
       elapsed_ms: elapsed,
+      abstained: abstention.abstained,
+      abstention_reason: abstention.reason,
+      confidence: abstention.confidence,
     },
   });
 });

@@ -26,6 +26,45 @@ export interface Constraints {
   quality_weight?: number;
   cost_weight?: number;
   latency_weight?: number;
+  min_routing_confidence?: number;
+}
+
+export type AbstentionReason =
+  | 'no_candidates'
+  | 'constraints_filtered_all_candidates'
+  | 'top_candidate_below_confidence_threshold';
+
+export interface AbstentionDecision {
+  abstained: boolean;
+  reason: AbstentionReason | null;
+  confidence: number | null;
+}
+
+export const DEFAULT_MIN_ROUTING_CONFIDENCE = 0.35;
+
+export function evaluateAbstention(
+  ranked: RankedAgent[],
+  candidateCount: number,
+  minimumConfidence: number = DEFAULT_MIN_ROUTING_CONFIDENCE
+): AbstentionDecision {
+  if (ranked.length === 0) {
+    return {
+      abstained: true,
+      reason: candidateCount > 0 ? 'constraints_filtered_all_candidates' : 'no_candidates',
+      confidence: null,
+    };
+  }
+
+  const confidence = ranked[0].quality_score;
+  if (confidence < minimumConfidence) {
+    return {
+      abstained: true,
+      reason: 'top_candidate_below_confidence_threshold',
+      confidence,
+    };
+  }
+
+  return { abstained: false, reason: null, confidence };
 }
 
 const DEFAULT_WEIGHTS: RankingWeights = {
@@ -33,6 +72,8 @@ const DEFAULT_WEIGHTS: RankingWeights = {
   cost: 0.3,
   latency: 0.2,
 };
+
+const DEFAULT_RELEVANCE_WINDOW = 0.08;
 
 /**
  * Multi-factor ranker.
@@ -129,6 +170,13 @@ export async function rankAgents(
       source_url: a.source_url,
     };
   });
+
+  // Capability first: cost and latency may choose among similarly relevant
+  // candidates, but must never promote a cheap unrelated agent.
+  const bestQuality = Math.max(...ranked.map((agent) => agent.quality_score));
+  ranked = ranked.filter(
+    (agent) => agent.quality_score >= bestQuality - DEFAULT_RELEVANCE_WINDOW
+  );
 
   // Apply hard constraints (filter)
   if (constraints.min_quality_score != null) {

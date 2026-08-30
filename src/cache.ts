@@ -17,7 +17,14 @@ redis.on('error', (err) => console.warn('Redis error:', err.message));
 
 function hashKey(prefix: string, input: string): string {
   const hash = createHash('sha256').update(input).digest('hex').slice(0, 16);
-  return `ar:${prefix}:${hash}`;
+  return `sl:${prefix}:${hash}`;
+}
+
+export async function closeCache(): Promise<void> {
+  if (connected) {
+    await redis.quit();
+    connected = false;
+  }
 }
 
 /** Cache task profile — same task text → same classification. TTL: 1 hour */

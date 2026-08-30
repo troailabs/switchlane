@@ -19,8 +19,10 @@ npm run dev
 1. Fork the repo and create a branch from `main`
 2. Make your changes
 3. Run `npm run test` to ensure tests pass
-4. Run `npm run build` to check TypeScript compilation
-5. Submit a pull request
+4. Run `npm run test:integration` with PostgreSQL and Redis available
+5. Run `npm run build` to check TypeScript compilation
+6. Run `python -m pytest python/tests` for Python SDK changes
+7. Submit a pull request
 
 ## Code Style
 
@@ -46,4 +48,4 @@ npm run dev
 
 By contributing, you agree that contributions to the server will be licensed
 under the [GNU AGPL v3](LICENSE), while contributions contained entirely in
-the SDK will be licensed under the [MIT License](sdk/LICENSE).
+the TypeScript or Python SDKs will be licensed under the MIT License.
