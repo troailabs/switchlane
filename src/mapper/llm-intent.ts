@@ -129,7 +129,8 @@ function heuristicProfile(taskText: string): TaskProfile & { keywords: string[] 
 
   // Extract potential keywords
   const categoryMap: Record<string, string[]> = {
-    code_review: ['code', 'review', 'refactor', 'lint', 'security', 'vulnerability'],
+    security: ['security', 'vulnerability', 'injection', 'xss', 'secret', 'audit'],
+    code_review: ['code', 'review', 'refactor', 'lint'],
     database: ['sql', 'database', 'query', 'postgres', 'mysql', 'mongodb'],
     web_scraping: ['scrape', 'crawl', 'extract', 'website', 'browser'],
     search: ['search', 'find', 'lookup', 'query'],

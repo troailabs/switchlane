@@ -92,8 +92,8 @@ export async function executeViaAgent(
     };
   }
 
-  // For REST API agents, forward via HTTP
-  // TODO: Implement REST API proxy
+  // Only MCP execution is supported in this release. Other providers can
+  // still be recommended, but execution fails explicitly and safely.
   return {
     agent_id: agent.agent_id,
     agent_name: agent.name,

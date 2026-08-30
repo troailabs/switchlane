@@ -8,6 +8,7 @@ export interface RouteRequest {
     quality_weight?: number;
     cost_weight?: number;
     latency_weight?: number;
+    min_routing_confidence?: number;
   };
   execute?: boolean;
   limit?: number;
@@ -45,9 +46,12 @@ export interface RouteResponse {
   execution?: ExecutionResult;
   task_profile: TaskProfile;
   meta: {
-    match_path: 'schema_match' | 'llm_intent' | 'hybrid';
+    match_path: string;
     candidates_evaluated: number;
     elapsed_ms: number;
+    abstained: boolean;
+    abstention_reason: 'no_candidates' | 'constraints_filtered_all_candidates' | 'top_candidate_below_confidence_threshold' | null;
+    confidence: number | null;
   };
 }
 

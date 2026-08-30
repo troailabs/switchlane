@@ -1,5 +1,7 @@
 # Switchlane
 
+[![CI](https://github.com/troailabs/switchlane/actions/workflows/ci.yml/badge.svg)](https://github.com/troailabs/switchlane/actions/workflows/ci.yml)
+
 **Runtime routing for multi-agent systems** — send a task, select the best eligible agent.
 
 Switchlane is an open-source decision layer that matches tasks to eligible AI agents and MCP-backed services at runtime. It ranks candidates by task fit, quality, cost, and latency, then returns recommendations or delegates execution.
@@ -19,6 +21,7 @@ Task → Schema Match (pgvector) → Rank → Response
 - **Semantic routing** — pgvector cosine similarity over tool schemas and descriptions
 - **LLM fallback** — intent mapping when embeddings don't match
 - **Bayesian scoring** — multi-factor ranking: quality × cost × latency
+- **Safe abstention** — returns no match instead of promoting an unrelated agent
 - **MCP proxy** — optionally execute tasks through the best agent
 - **Registry crawlers** — auto-discover agents from GitHub and npm
 - **Trust layer** — SLA probing, health verification, stale agent detection
@@ -31,6 +34,19 @@ Task → Schema Match (pgvector) → Rank → Response
 
 - Node.js 20+
 - Docker (for PostgreSQL + Redis)
+
+### Run the deterministic demo
+
+No signup, API key, registry crawl, or external LLM is required:
+
+```bash
+git clone https://github.com/troailabs/switchlane.git
+cd switchlane
+npm install
+npm run demo
+```
+
+The demo applies migrations, seeds eight purpose-built candidates, and routes ten fixed tasks through the same API path used by the server. Two unsupported tasks demonstrate abstention.
 
 ### Setup
 
@@ -79,6 +95,8 @@ curl -s http://localhost:3001/v1/route \
 
 ## SDK
 
+### TypeScript
+
 ```bash
 npm install switchlane
 ```
@@ -100,6 +118,42 @@ const executed = await client.execute(
 console.log(executed.execution);
 ```
 
+### Python
+
+```bash
+pip install switchlane
+```
+
+```python
+from switchlane import Switchlane
+
+with Switchlane("sl_live_...") as client:
+  result = client.route("review this pull request")
+  if result.meta.abstained:
+    print(result.meta.abstention_reason)
+  else:
+    print(result.recommendations[0].agent_id)
+```
+
+Both SDKs are thin API clients. Switchlane is not an agent framework.
+
+## Reproducible Benchmark
+
+Run after `npm run demo`:
+
+```bash
+npm run benchmark
+```
+
+The bundled synthetic benchmark contains eight supported tasks and two deliberately unsupported tasks. It uses no external LLM and compares a token-overlap baseline with the production routing path.
+
+| Router | Correct decisions | Accuracy |
+|--------|-------------------|----------|
+| Lexical baseline | 9/10 | 90% |
+| Switchlane | 10/10 | 100% |
+
+This is a deterministic smoke benchmark, not evidence of production accuracy. Its purpose is to make ranking and abstention behavior reproducible. Real-world evaluation against supervisor-LLM routing remains future validation work.
+
 ## API
 
 | Endpoint | Description |
@@ -115,6 +169,8 @@ console.log(executed.execution);
 | `GET /v1/billing/usage` | Usage stats |
 
 Full API spec: [openapi.yaml](openapi.yaml)
+
+When no candidate clears the default confidence threshold (`0.35`), `meta.abstained` is `true` and `recommendations` is empty. Set `constraints.min_routing_confidence` to define a stricter or looser policy per request.
 
 ## Architecture
 
@@ -173,8 +229,16 @@ npm run crawl:github  # Crawl GitHub MCP servers
 npm run crawl:npm     # Crawl npm MCP packages
 npm run sla:probe     # Run SLA health probes
 npm run verify        # Verify agent health
-npm run test          # Run tests
+npm run demo          # Seed and run the signup-free deterministic demo
+npm run benchmark     # Compare lexical and Switchlane routing on fixed cases
+npm run test          # Run unit tests
+npm run test:integration # Run database-backed API tests
+npm run test:all      # Run unit and integration tests
 ```
+
+## Security Boundary
+
+Recommendation mode is the default. Execution is opt-in (`execute: true`) and currently supports MCP endpoints. Treat third-party agents and MCP servers as untrusted infrastructure; review their permissions and credential access before enabling execution.
 
 ## Contributing
 
@@ -183,6 +247,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 The Switchlane server is licensed under [GNU AGPL v3](LICENSE). The TypeScript
-SDK in [sdk/](sdk/) is licensed separately under the [MIT License](sdk/LICENSE).
+SDK in [sdk/](sdk/) and Python SDK in [python/](python/) are licensed separately
+under the MIT License.
 
 Copyright © 2026 Troia Labs.

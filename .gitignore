@@ -3,6 +3,12 @@ dist/
 .env
 *.log
 .DS_Store
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+python/build/
+python/dist/
 
 # Local-only files
 local/

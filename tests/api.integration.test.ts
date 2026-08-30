@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-
-const BASE_URL = process.env.SWITCHLANE_BASE_URL ?? 'http://localhost:3001';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import app from '../src/app.js';
+import { closeCache } from '../src/cache.js';
+import { closeDb } from '../src/db/client.js';
+import { seedDemoCatalog } from '../src/demo/seed.js';
 
 async function api(method: string, path: string, body?: unknown, apiKey?: string) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await app.request(path, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -15,6 +17,15 @@ async function api(method: string, path: string, body?: unknown, apiKey?: string
 
 describe('Switchlane API', () => {
   let testApiKey: string;
+
+  beforeAll(async () => {
+    await seedDemoCatalog();
+  }, 120_000);
+
+  afterAll(async () => {
+    await closeCache();
+    await closeDb();
+  });
 
   describe('Health', () => {
     it('returns ok', async () => {
@@ -52,15 +63,15 @@ describe('Switchlane API', () => {
     });
 
     it('searches agents', async () => {
-      const { status, data } = await api('GET', '/v1/agents?search=math');
+      const { status, data } = await api('GET', '/v1/agents?search=Math Solver');
       expect(status).toBe(200);
       expect(data.agents.some((a: any) => a.name.toLowerCase().includes('math'))).toBe(true);
     });
 
     it('returns agent detail', async () => {
-      const { status, data } = await api('GET', '/v1/agents/ethanhenrickson-math-mcp');
+      const { status, data } = await api('GET', '/v1/agents/demo-math-solver');
       expect(status).toBe(200);
-      expect(data.id).toBe('ethanhenrickson-math-mcp');
+      expect(data.id).toBe('demo-math-solver');
       expect(data.tools).toBeInstanceOf(Array);
       expect(data.tools.length).toBeGreaterThan(0);
     });
@@ -74,22 +85,25 @@ describe('Switchlane API', () => {
   describe('Routing', () => {
     it('routes a math task to math agent', async () => {
       const { status, data } = await api('POST', '/v1/route', {
-        task: 'Calculate the sum of 1, 2, 3, 4, 5',
+        task: 'Calculate compound interest for this principal and annual rate',
         limit: 5,
       }, testApiKey);
       expect(status).toBe(200);
       expect(data.recommendations).toBeInstanceOf(Array);
       expect(data.task_profile).toBeDefined();
       expect(data.meta.elapsed_ms).toBeTypeOf('number');
+      expect(data.meta.abstained).toBe(false);
+      expect(data.recommendations[0].agent_id).toBe('demo-math-solver');
     });
 
     it('routes a search task', async () => {
       const { status, data } = await api('POST', '/v1/route', {
-        task: 'Search the web for latest AI research papers',
+        task: 'Research the latest browser automation tools and cite sources',
         limit: 3,
       }, testApiKey);
       expect(status).toBe(200);
       expect(data.recommendations.length).toBeGreaterThan(0);
+      expect(data.recommendations[0].agent_id).toBe('demo-web-researcher');
       expect(data.meta.match_path).toMatch(/schema_match|llm_intent|hybrid/);
     });
 
@@ -115,17 +129,25 @@ describe('Switchlane API', () => {
         limit: 5,
       }, testApiKey);
       expect(status).toBe(200);
-      // With min_quality_score 0.99, likely no agents qualify
-      for (const r of data.recommendations) {
-        expect(r.quality_score).toBeGreaterThanOrEqual(0.99);
-      }
+      expect(data.recommendations).toEqual([]);
+      expect(data.meta.abstained).toBe(true);
+      expect(data.meta.abstention_reason).toBe('constraints_filtered_all_candidates');
+    });
+
+    it('abstains rather than returning an unrelated agent', async () => {
+      const { status, data } = await api('POST', '/v1/route', {
+        task: 'Book a dental appointment near me for tomorrow morning',
+      }, testApiKey);
+      expect(status).toBe(200);
+      expect(data.meta.abstained).toBe(true);
+      expect(data.recommendations).toEqual([]);
     });
   });
 
   describe('Feedback', () => {
     it('accepts feedback and updates Bayesian score', async () => {
       const { status, data } = await api('POST', '/v1/feedback', {
-        agent_id: 'ethanhenrickson-math-mcp',
+        agent_id: 'demo-math-solver',
         score: 0.95,
         comment: 'Vitest: excellent',
       }, testApiKey);
