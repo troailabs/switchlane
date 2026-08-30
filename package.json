@@ -1,0 +1,50 @@
+{
+  "name": "switchlane-server",
+  "version": "0.1.0",
+  "description": "Runtime routing for multi-agent systems",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "author": "Troia Labs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/troailabs/switchlane.git"
+  },
+  "homepage": "https://router.troialabs.ai",
+  "bugs": {
+    "url": "https://github.com/troailabs/switchlane/issues"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "crawl:github": "tsx src/crawler/github.ts",
+    "crawl:npm": "tsx src/crawler/npm.ts",
+    "sla:probe": "tsx src/trust/sla-prober.ts",
+    "verify": "tsx src/trust/verifier.ts",
+    "copilot:auth": "tsx src/llm/copilot-auth.ts",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.17",
+    "@huggingface/transformers": "^3.8.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "cron": "^4.4.0",
+    "hono": "^4.13.5",
+    "pg": "^8.13.0",
+    "pgvector": "^0.2.0",
+    "redis": "^4.7.0",
+    "stripe": "^22.0.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/cron": "^2.0.1",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "dotenv": "^16.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

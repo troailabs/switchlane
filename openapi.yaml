@@ -1,0 +1,536 @@
+openapi: 3.1.0
+info:
+  title: Switchlane API
+  description: Runtime routing for multi-agent systems
+  version: 0.1.0
+  contact:
+    url: https://router.troialabs.ai
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+  - url: https://router.troialabs.ai
+    description: Production
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /v1/route:
+    post:
+      summary: Route a task to the best agent
+      description: |
+        Send a task description and get ranked agent recommendations.
+        Set `execute: true` to proxy the request through the best agent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouteRequest"
+      responses:
+        "200":
+          description: Routing recommendations (and execution result if execute=true)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /v1/agents:
+    get:
+      summary: List indexed agents
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: provider
+          in: query
+          schema:
+            type: string
+            enum: [mcp, a2a, rest_api, manual]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, stale, dead]
+            default: active
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of agents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentListResponse"
+
+  /v1/agents/{id}:
+    get:
+      summary: Get agent details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Agent details with tools
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentDetail"
+        "404":
+          description: Agent not found
+
+  /v1/agents/{id}/benchmark:
+    get:
+      summary: Get agent benchmark results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Benchmark and feedback history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BenchmarkResult"
+
+  /v1/feedback:
+    post:
+      summary: Submit quality feedback for an agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackRequest"
+      responses:
+        "200":
+          description: Feedback accepted, Bayesian score updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackResponse"
+
+  /v1/tasks/taxonomy:
+    get:
+      summary: Get emergent task taxonomy
+      responses:
+        "200":
+          description: Tags and tool categories derived from indexed agents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxonomyResponse"
+
+  /v1/billing/register:
+    post:
+      summary: Register and get an API key
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: API key created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+
+  /v1/billing/usage:
+    get:
+      summary: Get current usage stats
+      responses:
+        "200":
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "API key: `Authorization: Bearer sl_live_xxx`"
+
+  responses:
+    BadRequest:
+      description: Invalid request body
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: object
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    RateLimited:
+      description: Monthly rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              limit:
+                type: integer
+              used:
+                type: integer
+
+  schemas:
+    RouteRequest:
+      type: object
+      required: [task]
+      properties:
+        task:
+          type: string
+          maxLength: 2000
+          description: Natural language task description
+          example: Review this Python code for security vulnerabilities
+        input:
+          type: object
+          additionalProperties: true
+          description: Optional payload to forward when execute=true
+        constraints:
+          type: object
+          properties:
+            max_latency_ms:
+              type: number
+            max_cost_usd:
+              type: number
+            min_quality_score:
+              type: number
+              minimum: 0
+              maximum: 1
+            quality_weight:
+              type: number
+              minimum: 0
+              maximum: 1
+            cost_weight:
+              type: number
+              minimum: 0
+              maximum: 1
+            latency_weight:
+              type: number
+              minimum: 0
+              maximum: 1
+        execute:
+          type: boolean
+          default: false
+          description: "false = recommend only, true = execute via proxy"
+        limit:
+          type: integer
+          default: 5
+          minimum: 1
+          maximum: 20
+
+    RouteResponse:
+      type: object
+      properties:
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Recommendation"
+        execution:
+          $ref: "#/components/schemas/ExecutionResult"
+        task_profile:
+          $ref: "#/components/schemas/TaskProfile"
+        meta:
+          type: object
+          properties:
+            match_path:
+              type: string
+              enum: [schema_match, llm_intent, hybrid]
+            candidates_evaluated:
+              type: integer
+            elapsed_ms:
+              type: integer
+
+    Recommendation:
+      type: object
+      properties:
+        agent_id:
+          type: string
+        provider:
+          type: string
+        quality_score:
+          type: number
+        estimated_cost_usd:
+          type: number
+          nullable: true
+        estimated_latency_ms:
+          type: number
+          nullable: true
+        match_reason:
+          type: string
+        endpoint:
+          type: string
+
+    ExecutionResult:
+      type: object
+      properties:
+        agent_id:
+          type: string
+        agent_name:
+          type: string
+        tool_used:
+          type: string
+          nullable: true
+        success:
+          type: boolean
+        content:
+          description: Response from the agent
+        error:
+          type: string
+        latency_ms:
+          type: integer
+
+    TaskProfile:
+      type: object
+      properties:
+        category:
+          type: string
+        subcategory:
+          type: string
+          nullable: true
+        language:
+          type: string
+          nullable: true
+        complexity:
+          type: string
+          enum: [simple, medium, complex]
+
+    AgentListResponse:
+      type: object
+      properties:
+        agents:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              description:
+                type: string
+              provider:
+                type: string
+              tags:
+                type: array
+                items:
+                  type: string
+              combined_score:
+                type: number
+              pricing_model:
+                type: string
+              status:
+                type: string
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            pages:
+              type: integer
+
+    AgentDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        provider:
+          type: string
+        source_url:
+          type: string
+        tools:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              input_schema:
+                type: object
+        quality:
+          type: object
+          properties:
+            benchmark_score:
+              type: number
+            usage_score:
+              type: number
+              nullable: true
+            combined_score:
+              type: number
+            sample_count:
+              type: integer
+
+    BenchmarkResult:
+      type: object
+      properties:
+        agent_id:
+          type: string
+        benchmark_score:
+          type: number
+        combined_score:
+          type: number
+        sample_count:
+          type: integer
+        recent_feedback:
+          type: array
+          items:
+            type: object
+            properties:
+              score:
+                type: number
+              created_at:
+                type: string
+                format: date-time
+
+    FeedbackRequest:
+      type: object
+      required: [agent_id, score]
+      properties:
+        agent_id:
+          type: string
+        task_id:
+          type: string
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        comment:
+          type: string
+          maxLength: 1000
+
+    FeedbackResponse:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+        agent_id:
+          type: string
+        new_combined_score:
+          type: number
+        sample_count:
+          type: integer
+
+    TaxonomyResponse:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: object
+            properties:
+              tag:
+                type: string
+              count:
+                type: integer
+        tool_categories:
+          type: array
+          items:
+            type: object
+        total_agents:
+          type: integer
+        total_tools:
+          type: integer
+
+    RegisterResponse:
+      type: object
+      properties:
+        api_key:
+          type: string
+          description: Store securely — shown only once
+        key_prefix:
+          type: string
+        tier:
+          type: string
+        monthly_limit:
+          type: integer
+
+    UsageResponse:
+      type: object
+      properties:
+        tier:
+          type: string
+        requests_this_month:
+          type: integer
+        monthly_limit:
+          type: integer
+        cost_per_request:
+          type: number
+        estimated_bill_usd:
+          type: number

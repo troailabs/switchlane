@@ -1,0 +1,29 @@
+{
+  "name": "switchlane",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Switchlane — runtime routing for multi-agent systems",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "keywords": ["ai", "agents", "mcp", "routing", "switchlane"],
+  "license": "MIT",
+  "author": "Troia Labs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/troailabs/switchlane.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://router.troialabs.ai",
+  "bugs": {
+    "url": "https://github.com/troailabs/switchlane/issues"
+  }
+}
