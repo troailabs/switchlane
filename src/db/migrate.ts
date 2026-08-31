@@ -5,7 +5,8 @@ import { pool } from './client.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-async function migrate() {
+export async function migrate(options: { closePool?: boolean } = {}) {
+  const closePool = options.closePool ?? true;
   console.log('Running database migrations...');
 
   const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
@@ -50,10 +51,14 @@ async function migrate() {
     console.log('Migrations completed successfully.');
   } catch (error) {
     console.error('Migration failed:', error);
-    process.exit(1);
+    throw error;
   } finally {
-    await pool.end();
+    if (closePool) await pool.end();
   }
 }
 
-migrate();
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  migrate().catch(() => {
+    process.exitCode = 1;
+  });
+}

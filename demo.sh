@@ -1,27 +1,15 @@
 #!/usr/bin/env sh
 set -eu
 
-export NODE_ENV=development
-export LLM_BASE_URL=
-export LLM_MODEL=
-export DATABASE_URL=postgresql://switchlane:switchlane@localhost:5434/switchlane_demo
-export REDIS_URL=redis://localhost:6379/15
+project="switchlane-demo-$$"
+compose="docker compose -p $project -f docker-compose.demo.yml"
 
-printf '%s\n' 'Starting PostgreSQL and Redis...'
-docker compose up -d --wait postgres redis
+cleanup() {
+  printf '%s\n' 'Cleaning up isolated demo resources...'
+  $compose down --volumes --remove-orphans >/dev/null 2>&1 || true
+}
 
-printf '%s\n' 'Resetting isolated demo database...'
-docker compose exec -T postgres psql -U switchlane -d postgres -c \
-	'DROP DATABASE IF EXISTS switchlane_demo WITH (FORCE)'
-docker compose exec -T postgres psql -U switchlane -d postgres -c \
-	'CREATE DATABASE switchlane_demo'
-docker compose exec -T redis redis-cli -n 15 FLUSHDB >/dev/null
+trap cleanup EXIT INT TERM
 
-printf '%s\n' 'Applying schema and migrations...'
-npm run db:migrate
-
-printf '%s\n' 'Seeding deterministic demo catalog...'
-npm run demo:seed
-
-printf '%s\n' 'Running production routing path without signup or external LLM calls...'
-npm run demo:run
+printf '%s\n' 'Building and running the isolated Switchlane demo...'
+$compose up --build --abort-on-container-exit --exit-code-from demo demo
