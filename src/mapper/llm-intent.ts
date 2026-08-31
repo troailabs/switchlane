@@ -1,6 +1,5 @@
-import { config } from '../config.js';
 import { query } from '../db/client.js';
-import { copilotComplete, isCopilotAvailable } from '../llm/copilot.js';
+import { isLlmAvailable, llmComplete } from '../llm/openai-compatible.js';
 
 export interface TaskProfile {
   category: string;
@@ -33,22 +32,23 @@ Respond ONLY with valid JSON, no markdown:
 }`;
 
 /**
- * Path B: LLM Intent Mapping — extract structured task profile via GitHub Copilot.
+ * Path B: LLM Intent Mapping — extract a structured task profile through an
+ * optional OpenAI-compatible endpoint.
  * Used when Path A (embedding match) doesn't find confident matches.
  */
 export async function extractTaskProfile(taskText: string): Promise<TaskProfile & { keywords: string[] }> {
-  if (!isCopilotAvailable()) {
+  if (!isLlmAvailable()) {
     // Fallback: return a basic profile from heuristic parsing
     return heuristicProfile(taskText);
   }
 
   try {
-    const content = await copilotComplete(
+    const content = await llmComplete(
       [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: taskText },
       ],
-      { model: 'gpt-4o-mini', temperature: 0.1, max_tokens: 300 }
+      { temperature: 0.1, max_tokens: 300 }
     );
 
     if (!content) return heuristicProfile(taskText);
@@ -203,7 +203,7 @@ export async function rerankAgents(
   candidates: Array<{ id: string; name: string; description: string; tools: string[]; use_count: number }>
 ): Promise<RerankResult[]> {
   if (candidates.length === 0) return [];
-  if (!isCopilotAvailable()) return heuristicRerank(task, candidates);
+  if (!isLlmAvailable()) return heuristicRerank(task, candidates);
 
   // Build candidate list for LLM
   const candidateLines = candidates.map((c, i) => {
@@ -213,12 +213,12 @@ export async function rerankAgents(
   }).join('\n');
 
   try {
-    const content = await copilotComplete(
+    const content = await llmComplete(
       [
         { role: 'system', content: RERANK_SYSTEM_PROMPT },
         { role: 'user', content: `Task: "${task}"\n\nCandidates:\n${candidateLines}` },
       ],
-      { model: 'gpt-4o-mini', temperature: 0.1, max_tokens: 800 }
+      { temperature: 0.1, max_tokens: 800 }
     );
 
     if (!content) return heuristicRerank(task, candidates);

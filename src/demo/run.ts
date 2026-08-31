@@ -2,7 +2,8 @@ import { BENCHMARK_CASES } from './fixtures.js';
 
 async function main() {
   process.env.NODE_ENV = 'development';
-  process.env.GITHUB_TOKEN = '';
+  process.env.LLM_BASE_URL = '';
+  process.env.LLM_MODEL = '';
   const [{ default: app }, { closeCache }, { closeDb }] = await Promise.all([
     import('../app.js'),
     import('../cache.js'),
