@@ -36,6 +36,7 @@
     "@huggingface/transformers": "^3.8.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "cron": "^4.4.0",
+    "dotenv": "^16.6.1",
     "hono": "^4.13.5",
     "pg": "^8.13.0",
     "pgvector": "^0.2.0",
@@ -47,7 +48,6 @@
     "@types/cron": "^2.0.1",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.11.0",
-    "dotenv": "^16.4.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

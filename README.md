@@ -42,11 +42,10 @@ No signup, API key, registry crawl, or external LLM is required:
 ```bash
 git clone https://github.com/troailabs/switchlane.git
 cd switchlane
-npm install
 npm run demo
 ```
 
-The demo applies migrations, seeds eight purpose-built candidates, and routes ten fixed tasks through the same API path used by the server. Two unsupported tasks demonstrate abstention.
+The demo builds an isolated Docker stack, applies migrations, seeds eight purpose-built candidates, and routes ten fixed tasks through the same API path used by the server. Two unsupported tasks demonstrate abstention. It publishes no host ports and removes its temporary containers, network, and data automatically.
 
 ### Setup
 
@@ -211,7 +210,9 @@ See [.env.example](.env.example) for all available environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `POSTGRES_PORT` | PostgreSQL host port used by the development Compose stack | `5434` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://switchlane:switchlane@localhost:5434/switchlane` |
+| `REDIS_PORT` | Redis host port used by the development Compose stack | `6379` |
 | `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
 | `PORT` | HTTP server port | `3001` |
 | `LLM_BASE_URL` | Optional OpenAI-compatible API base URL, including `/v1` | — |

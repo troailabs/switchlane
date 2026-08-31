@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: switchlane
+      POSTGRES_PASSWORD: switchlane
+      POSTGRES_DB: switchlane_demo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U switchlane -d switchlane_demo"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  demo:
+    build:
+      context: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://switchlane:switchlane@postgres:5432/switchlane_demo
+      REDIS_URL: redis://redis:6379
+      LLM_BASE_URL: ""
+      LLM_MODEL: ""
+      HF_HOME: /tmp/huggingface
+    command: ["dist/demo/container.js"]
