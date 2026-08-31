@@ -23,7 +23,6 @@
     "crawl:npm": "tsx src/crawler/npm.ts",
     "sla:probe": "tsx src/trust/sla-prober.ts",
     "verify": "tsx src/trust/verifier.ts",
-    "copilot:auth": "tsx src/llm/copilot-auth.ts",
     "demo": "sh demo.sh",
     "demo:seed": "tsx src/demo/seed.ts",
     "demo:run": "tsx src/demo/run.ts",

@@ -54,7 +54,8 @@ jobs:
           --health-retries 10
     env:
       NODE_ENV: development
-      GITHUB_TOKEN: ""
+      LLM_BASE_URL: ""
+      LLM_MODEL: ""
       DATABASE_URL: postgresql://switchlane:switchlane@localhost:5434/switchlane
       REDIS_URL: redis://localhost:6379
     steps:

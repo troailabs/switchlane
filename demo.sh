@@ -2,7 +2,8 @@
 set -eu
 
 export NODE_ENV=development
-export GITHUB_TOKEN=
+export LLM_BASE_URL=
+export LLM_MODEL=
 export DATABASE_URL=postgresql://switchlane:switchlane@localhost:5434/switchlane_demo
 export REDIS_URL=redis://localhost:6379/15
 

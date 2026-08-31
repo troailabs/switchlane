@@ -6,7 +6,9 @@ export default defineConfig({
     hookTimeout: 120_000,
     env: {
       NODE_ENV: 'development',
-      GITHUB_TOKEN: '',
+      LLM_BASE_URL: '',
+      LLM_API_KEY: '',
+      LLM_MODEL: '',
       DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql://switchlane:switchlane@localhost:5434/switchlane',
       REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
     },

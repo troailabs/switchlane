@@ -182,7 +182,7 @@ src/
 ├── cache.ts               # Redis caching layer
 ├── crawler/               # Public-source crawlers (GitHub, npm)
 ├── db/                    # PostgreSQL + pgvector
-├── llm/                   # LLM intent mapping (GitHub Copilot)
+├── llm/                   # Optional OpenAI-compatible intent mapping
 ├── mapper/                # Task → agent matching
 │   ├── schema-match.ts    # Path A: pgvector cosine similarity
 │   ├── llm-intent.ts      # Path B: LLM-based intent mapping
@@ -214,7 +214,11 @@ See [.env.example](.env.example) for all available environment variables:
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://switchlane:switchlane@localhost:5434/switchlane` |
 | `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
 | `PORT` | HTTP server port | `3001` |
-| `GITHUB_TOKEN` | GitHub token for LLM intent mapping | — |
+| `LLM_BASE_URL` | Optional OpenAI-compatible API base URL, including `/v1` | — |
+| `LLM_API_KEY` | Optional bearer token for the configured LLM endpoint | — |
+| `LLM_MODEL` | Model used for intent extraction and reranking | — |
+| `LLM_TIMEOUT_MS` | LLM request timeout | `15000` |
+| `GITHUB_TOKEN` | Optional token for the GitHub crawler | — |
 | `STRIPE_SECRET_KEY` | Stripe secret key for billing | — |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | — |
 
