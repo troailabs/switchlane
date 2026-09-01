@@ -1,6 +1,6 @@
 {
   "name": "switchlane",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript SDK for Switchlane — runtime routing for multi-agent systems",
   "type": "module",
   "main": "dist/index.js",
@@ -19,7 +19,7 @@
   "author": "Troia Labs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/troailabs/switchlane.git",
+    "url": "git+https://github.com/troailabs/switchlane.git",
     "directory": "sdk"
   },
   "homepage": "https://router.troialabs.ai",
